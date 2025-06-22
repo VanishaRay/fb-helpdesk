@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - FB Helpdesk</title>
+    <style>
+        :root {
+            --primary: #4267B2;
+            --primary-dark: #355089;
+            --light-gray: #f5f6f7;
+            --border-color: #dddfe2;
+            --text-dark: #1c1e21;
+            --text-light: #65676b;
+            --success: #42b72a;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f0f2f5;
+            color: var(--text-dark);
+        }
+        
+        .header {
+            background: var(--primary);
+            color: white;
+            padding: 15px 25px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .dashboard {
+            display: grid;
+            grid-template-columns: 300px 1fr 250px;
+            gap: 15px;
+            height: calc(100vh - 60px);
+            padding: 15px;
+        }
+        
+        .panel {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            padding: 15px;
+            overflow-y: auto;
+        }
+        
+        .panel h2 {
+            margin-top: 0;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--primary-dark);
+        }
+        
+        .conversation-item {
+            padding: 12px;
+            margin: 5px 0;
+            cursor: pointer;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            transition: all 0.2s;
+        }
+        
+        .conversation-item:hover {
+            background: var(--light-gray);
+        }
+        
+        .conversation-item.active {
+            background: #e3f2fd;
+            border-color: #bbdefb;
+        }
+        
+        .conversation-item .customer-id {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        
+        .conversation-item .message-count {
+            font-size: 13px;
+            color: var(--text-light);
+        }
+        
+        #messages-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            min-height: 300px;
+            padding: 10px 0;
+        }
+        
+        .message {
+            padding: 10px 14px;
+            border-radius: 18px;
+            max-width: 75%;
+            word-wrap: break-word;
+        }
+        
+        .customer-message {
+            background: var(--light-gray);
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+        }
+        
+        .agent-message {
+            background: var(--primary);
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+        
+        .message-time {
+            font-size: 11px;
+            opacity: 0.8;
+            margin-top: 4px;
+        }
+        
+        .reply-box {
+            display: none; 
+            margin-top: 20px;
+            gap: 10px;
+        }
+        
+        .reply-box.active {
+            display: flex; 
+        }
+        
+        #reply-input {
+            flex-grow: 1;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        
+        #send-reply {
+            padding: 12px 20px;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        #send-reply:hover {
+            background-color: var(--primary-dark);
+        }
+        
+        #send-reply:disabled {
+            background-color: #a0b4d6;
+            cursor: not-allowed;
+        }
+        
+        #profile-container {
+            font-size: 14px;
+        }
+        
+        .profile-field {
+            margin-bottom: 12px;
+        }
+        
+        .profile-field strong {
+            display: block;
+            margin-bottom: 4px;
+            color: var(--text-light);
+        }
+        
+        #loading {
+            padding: 20px;
+            text-align: center;
+            color: var(--text-light);
+        }
+        
+        .empty-state {
+            text-align: center;
+            color: var(--text-light);
+            padding: 40px 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>FB Helpdesk Dashboard</h1>
+    </div>
+
+    <div class="dashboard">
+        <!-- Conversations Panel -->
+        <div class="panel">
+            <h2>Conversations</h2>
+            <div id="loading">Loading conversations...</div>
+            <div id="conversations-container"></div>
+        </div>
+
+        <!-- Messages Panel -->
+        <div class="panel">
+            <h2>Messages</h2>
+            <div id="messages-container">
+                <div class="empty-state">Select a conversation to view messages</div>
+            </div>
+            <div class="reply-box">
+                <input type="text" id="reply-input" placeholder="Type your reply...">
+                <button id="send-reply">Send</button>
+            </div>
+        </div>
+
+        <!-- Customer Profile -->
+        <div class="panel">
+            <h2>Customer Profile</h2>
+            <div id="profile-container">
+                <div class="empty-state">Select a conversation to view profile</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    
+    <script>
+        // Initialize Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyBEV1p0m0_k9oI2ul40c_LZkrv4z6HNFd8",
+            authDomain: "fb-helpdesk-48191.firebaseapp.com",
+            projectId: "fb-helpdesk-48191",
+            storageBucket: "fb-helpdesk-48191.firebasestorage.app",
+            messagingSenderId: "656050836032",
+            appId: "1:656050836032:web:70d225ced9374f3112c5a5",
+            measurementId: "G-43FQEHS0CQ"
+        };
+        
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        let selectedConversationId = null;
+        let conversationListener = null;
+
+        // Authentication check
+        firebase.auth().onAuthStateChanged(user => {
+            if (!user) {
+                window.location.href = "index.html";
+            } else {
+                loadConversations();
+            }
+        });
+
+        // Load conversations list
+        function loadConversations() {
+            db.collection("conversations")
+                .orderBy("lastMessageTime", "desc")
+                .onSnapshot(snapshot => {
+                    document.getElementById("loading").style.display = "none";
+                    const container = document.getElementById("conversations-container");
+                    container.innerHTML = "";
+                    
+                    if (snapshot.empty) {
+                        container.innerHTML = '<div class="empty-state">No conversations found</div>';
+                        return;
+                    }
+                    
+                    snapshot.forEach(doc => {
+                        const conversation = doc.data();
+                        const item = document.createElement("div");
+                        item.className = "conversation-item";
+                        item.innerHTML = `
+                            <div class="customer-id">${conversation.customerId.substring(0, 8)}...</div>
+                            <div class="message-count">${conversation.messages?.length || 0} messages</div>
+                        `;
+                        item.onclick = () => selectConversation(doc.id, conversation);
+                        container.appendChild(item);
+                    });
+                }, error => {
+                    console.error("Conversations error:", error);
+                    document.getElementById("loading").textContent = "Error loading conversations";
+                });
+        }
+
+        // Select conversation with real-time updates
+        function selectConversation(conversationId, conversation) {
+            if (conversationListener) conversationListener();
+            
+            selectedConversationId = conversationId;
+            document.querySelectorAll(".conversation-item").forEach(item => {
+                item.classList.remove("active");
+            });
+            event.currentTarget.classList.add("active");
+
+            document.querySelector('.reply-box').classList.add('active');
+            loadMessages(conversation.messages);
+            updateProfile(conversation);
+            
+            // Set up real-time listener for this conversation
+            conversationListener = db.collection("conversations").doc(conversationId)
+                .onSnapshot(doc => {
+                    if (doc.exists) {
+                        const updatedConversation = doc.data();
+                        loadMessages(updatedConversation.messages);
+                    }
+                }, error => {
+                    console.error("Conversation listener error:", error);
+                });
+        }
+
+        // Update profile info
+        function updateProfile(conversation) {
+            const profileContainer = document.getElementById("profile-container");
+            profileContainer.innerHTML = `
+                <div class="profile-field">
+                    <strong>Customer ID</strong>
+                    <div>${conversation.customerId}</div>
+                </div>
+                <div class="profile-field">
+                    <strong>Last Active</strong>
+                    <div>${conversation.lastMessageTime?.toDate().toLocaleString() || 'Unknown'}</div>
+                </div>
+            `;
+        }
+
+        // Display messages
+        function loadMessages(messages) {
+            const container = document.getElementById("messages-container");
+            container.innerHTML = "";
+            
+            if (!messages || messages.length === 0) {
+                container.innerHTML = '<div class="empty-state">No messages in this conversation</div>';
+                return;
+            }
+            
+            messages.forEach(msg => {
+                const messageDiv = document.createElement("div");
+                messageDiv.className = `message ${msg.sender === 'customer' ? 'customer-message' : 'agent-message'}`;
+                messageDiv.innerHTML = `
+                    <div>${msg.text}</div>
+                    <div class="message-time">${msg.time?.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) || ''}</div>
+                `;
+                container.appendChild(messageDiv);
+            });
+            
+            // Scroll to bottom
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // Send reply
+        document.getElementById("send-reply").addEventListener("click", async () => {
+            const messageText = document.getElementById("reply-input").value.trim();
+            if (!messageText || !selectedConversationId) return;
+            
+            const sendButton = document.getElementById("send-reply");
+            sendButton.disabled = true;
+            
+            try {
+                const convRef = db.collection("conversations").doc(selectedConversationId);
+                const convDoc = await convRef.get();
+                const currentMessages = convDoc.data().messages || [];
+                
+                // Add new message
+                currentMessages.push({
+                    text: messageText,
+                    sender: 'agent',
+                    time: new Date() // Client timestamp (will be updated by server)
+                });
+                
+                // Update conversation
+                await convRef.update({
+                    messages: currentMessages,
+                    lastMessageTime: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                // Clear input
+                document.getElementById("reply-input").value = "";
+            } catch (error) {
+                console.error("Send error:", error);
+                alert("Failed to send message: " + error.message);
+            } finally {
+                sendButton.disabled = false;
+            }
+        });
+
+        // Allow sending with Enter key
+        document.getElementById("reply-input").addEventListener("keypress", (e) => {
+            if (e.key === "Enter") {
+                document.getElementById("send-reply").click();
+            }
+        });
+    </script>
+</body>
+</html>

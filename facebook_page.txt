@@ -1,0 +1,32 @@
+{
+   "data": [
+      {
+         "access_token": "EAAU9ZCClEVJ0BO3DeyMZC9lTI1sKw2KZCVyjP62P59GanZA9seFBZAo92tcvMQ14PniXOu9CXRcov1G6StwRDBWZCr9QBDI2qc6iF2etIZBLwRh0FsyDp3pLRP37NIpf4o0uh4nc0uEWlq9V9hmxvUDGBXhvFvUP1kiatRDu38oDCOcZBAlPDlAc6cMmoXyMNG0QGkJDNG8A",
+         "category": "Food delivery service",
+         "category_list": [
+            {
+               "id": "1802051720039034",
+               "name": "Food delivery service"
+            }
+         ],
+         "name": "FB Helpdesk Test",
+         "id": "684224958109616",
+         "tasks": [
+            "MODERATE",
+            "MESSAGING",
+            "ANALYZE",
+            "ADVERTISE",
+            "CREATE_CONTENT",
+            "MANAGE"
+         ]
+      }
+   ],
+   "paging": {
+      "cursors": {
+         "before": "QVFIUi1HMUpFUGE1a1hWX2Y2TVZAWeHZAHMVZAYeW1tUjhMYWZA6ekthck05MlpEek5VRkVGcTR1QUg0X2dRSGJtZAGppaWNLMGcwVlI3THYzV2FvZA25FYlJENEZAn",
+         "after": "QVFIUi1HMUpFUGE1a1hWX2Y2TVZAWeHZAHMVZAYeW1tUjhMYWZA6ekthck05MlpEek5VRkVGcTR1QUg0X2dRSGJtZAGppaWNLMGcwVlI3THYzV2FvZA25FYlJENEZAn"
+      }
+   }
+}
+
+firebase functions:config:set fb.verify_token="X9qA2zE5vK8yB3nL7wR4tG6pJ1mD0cF8"

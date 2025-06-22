@@ -1,0 +1,14 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId} {
+      allow read, write: if 
+        debug(request.auth) != null && 
+        debug(request.auth.uid) == debug(userId);
+    }
+  }
+  match /conversations/{conversationId} {
+  	allow read: if request.auth != null;
+  	allow create: if request.auth.uid == request.resource.data.userId;
+	}
+}

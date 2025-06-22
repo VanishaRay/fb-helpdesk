@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connect Facebook</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #080d8a;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .connect-container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            width: 400px;
+            text-align: center;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .status-message {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+        button {
+            padding: 12px 25px;
+            background-color: #4267B2;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            margin: 5px;
+        }
+        button.skip {
+            background-color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="connect-container">
+        <h1>Connect Facebook Page</h1>
+        <div id="status-message" class="status-message">
+            Connect your Facebook business page to manage messages.
+        </div>
+        <button id="connect-btn">Connect Page</button>
+        <button class="skip" onclick="window.location.href='dashboard.html'">Skip to Dashboard</button>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    
+    <script>
+        // Initialize Firebase (same config as index.html)
+        firebase.initializeApp({
+            apiKey: "AIzaSyBEV1p0m0_k9oI2ul40c_LZkrv4z6HNFd8",
+            authDomain: "fb-helpdesk-48191.firebaseapp.com",
+            projectId: "fb-helpdesk-48191",
+            storageBucket: "fb-helpdesk-48191.firebasestorage.app",
+            messagingSenderId: "656050836032",
+            appId: "1:656050836032:web:70d225ced9374f3112c5a5",
+            measurementId: "G-43FQEHS0CQ"
+        });
+
+        const db = firebase.firestore();
+
+        // Initialize FB SDK
+        window.fbAsyncInit = function() {
+            FB.init({
+                appId: '1475528116950173', 
+                cookie: true,
+                xfbml: true,
+                version: 'v18.0'
+            });
+
+            checkConnectionStatus();
+        };
+
+        document.getElementById('connect-btn').addEventListener('click', connectFB);
+
+        function connectFB() {
+            FB.login(response => {
+                if (response.authResponse) {
+                    // Save access token to Firestore
+                    const user = firebase.auth().currentUser;
+                    db.collection("users").doc(user.uid).set({
+                        fbAccessToken: response.authResponse.accessToken,
+                        lastConnected: firebase.firestore.FieldValue.serverTimestamp()
+                    }, { merge: true })
+                    .then(() => {
+                        window.location.href = "dashboard.html";
+                    });
+                }
+            }, { 
+                scope: 'pages_messaging,pages_show_list,pages_manage_metadata' 
+            });
+        }
+
+        function checkConnectionStatus() {
+            const user = firebase.auth().currentUser;
+            db.collection("users").doc(user.uid).get()
+                .then(doc => {
+                    if (doc.exists && doc.data().fbAccessToken) {
+                        window.location.href = "dashboard.html";
+                    }
+                });
+        }
+    </script>
+</body>
+</html>

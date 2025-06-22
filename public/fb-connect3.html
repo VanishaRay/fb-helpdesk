@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connect Facebook</title>
+    <style>
+        :root {
+            --primary: #4267B2;
+            --dark-blue: #080d8a;
+            --light-gray: #f5f6f7;
+            --white: #ffffff;
+            --text: #1c1e21;
+            --success: #42b72a;
+            --danger: #ff4d4f;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background-color: var(--dark-blue);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: var(--text);
+        }
+        
+        .connect-container {
+            background-color: var(--white);
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            width: 400px;
+            text-align: center;
+        }
+        
+        h1 {
+            color: var(--primary);
+            margin-bottom: 20px;
+        }
+        
+        .status-message {
+            margin: 20px 0;
+            padding: 15px;
+            background: var(--light-gray);
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        
+        .connected {
+            color: var(--success);
+        }
+        
+        .disconnected {
+            color: var(--primary);
+        }
+        
+        button {
+            padding: 12px 25px;
+            background-color: var(--primary);
+            color: var(--white);
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            margin: 5px;
+            width: 100%;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover {
+            background-color: #355089;
+        }
+        
+        button.danger {
+            background-color: var(--danger);
+        }
+        
+        button.danger:hover {
+            background-color: #e04345;
+        }
+        
+        button.success {
+            background-color: var(--primary);
+        }
+        
+        button.success:hover {
+            background-color: #36a420;
+        }
+        
+        .permissions {
+            text-align: left;
+            margin: 20px 0;
+            font-size: 14px;
+        }
+        
+        .permissions ul {
+            padding-left: 20px;
+        }
+        
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="connect-container">
+        <h1>Connect Facebook Page</h1>
+        
+        <div id="loading-state">
+            <div class="loader"></div>
+            <p>Checking connection status...</p>
+        </div>
+        
+        <div id="disconnected-state" class="hidden">
+            <div class="status-message disconnected">No Facebook Page Connected</div>
+            <p>Connect your Facebook business page to manage messages.</p>
+            
+            <div class="permissions">
+                <p><strong>This will allow:</strong></p>
+                <ul>
+                    <li>Access to your Page messages</li>
+                    <li>Permission to reply to messages</li>
+                    <li>Read Page conversations</li>
+                </ul>
+            </div>
+            
+            <button id="connect-btn">Connect Page</button>
+        </div>
+        
+        <div id="connected-state" class="hidden">
+            <div class="status-message connected" id="connection-status">Connected</div>
+            <button id="disconnect-btn" class="danger">Disconnect Page</button>
+            <button id="dashboard-btn" class="success">Go to Dashboard</button>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    
+    <script>
+        // Initialize Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyBEV1p0m0_k9oI2ul40c_LZkrv4z6HNFd8",
+            authDomain: "fb-helpdesk-48191.firebaseapp.com",
+            projectId: "fb-helpdesk-48191",
+            storageBucket: "fb-helpdesk-48191.firebasestorage.app",
+            messagingSenderId: "656050836032",
+            appId: "1:656050836032:web:70d225ced9374f3112c5a5",
+            measurementId: "G-43FQEHS0CQ"
+        };
+        
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        let selectedConversationId = null;
+
+        // Enhanced initialization flow
+        document.addEventListener('DOMContentLoaded', () => {
+            firebase.auth().onAuthStateChanged(async (user) => {
+                if (!user) {
+                    window.location.href = "index.html";
+                } else {
+                    try {
+                        await initializeFacebookSDK();
+                        await checkConnectionStatus();
+                    } catch (error) {
+                        console.error("Initialization error:", error);
+                        showDisconnectedState();
+                    }
+                }
+            });
+        });
+
+        // Initialize FB SDK with Promise
+        function initializeFacebookSDK() {
+            return new Promise((resolve) => {
+                window.fbAsyncInit = function() {
+                    FB.init({
+                        appId: '1475528116950173',
+                        cookie: true,
+                        xfbml: true,
+                        version: 'v18.0',
+                        status: true
+                    });
+                    FB.AppEvents.logPageView();
+                    resolve();
+                };
+
+                // Load SDK asynchronously
+                (function(d, s, id) {
+                    var js, fjs = d.getElementsByTagName(s)[0];
+                    if (d.getElementById(id)) return;
+                    js = d.createElement(s); js.id = id;
+                    js.src = "https://connect.facebook.net/en_US/sdk.js";
+                    fjs.parentNode.insertBefore(js, fjs);
+                }(document, 'script', 'facebook-jssdk'));
+            });
+        }
+
+        // Enhanced connection check with token validation
+        async function checkConnectionStatus() {
+            const user = firebase.auth().currentUser;
+            if (!user) return;
+            
+            try {
+                const doc = await db.collection("users").doc(user.uid).get();
+                
+                if (doc.exists && doc.data().fbAccessToken) {
+                    const isValid = await validateFacebookToken(doc.data().fbAccessToken);
+                    if (isValid) {
+                        const pageInfo = await getPageInfo(doc.data().fbAccessToken);
+                        if (pageInfo) {
+                            showConnectedState(pageInfo.name);
+                            return;
+                        }
+                    } else {
+                        // Token is invalid, clear it
+                        await db.collection("users").doc(user.uid).update({
+                            fbAccessToken: firebase.firestore.FieldValue.delete()
+                        });
+                    }
+                }
+                showDisconnectedState();
+            } catch (error) {
+                console.error("Connection check error:", error);
+                showDisconnectedState();
+            }
+        }
+
+        // Validate Facebook token
+        function validateFacebookToken(token) {
+            return new Promise((resolve) => {
+                FB.api('/me', { access_token: token }, (response) => {
+                    resolve(!response.error);
+                });
+            });
+        }
+
+        // Get page info with error handling
+        function getPageInfo(accessToken) {
+            return new Promise((resolve) => {
+                FB.api(
+                    '/me/accounts',
+                    { access_token: accessToken },
+                    (response) => {
+                        if (response.error) {
+                            console.error("Facebook API error:", response.error);
+                            resolve(null);
+                        } else if (response.data?.length > 0) {
+                            resolve(response.data[0]);
+                        } else {
+                            resolve(null);
+                        }
+                    }
+                );
+            });
+        }
+
+        function savePageInfo(page) {
+            const user = firebase.auth().currentUser;
+            return db.collection("users").doc(user.uid).update({
+                fbPageId: page.id,
+                fbPageName: page.name,
+                fbPageAccessToken: page.access_token,
+                lastConnected: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        }
+
+        function showConnectedState(pageName) {
+            document.getElementById('loading-state').classList.add('hidden');
+            document.getElementById('connection-status').textContent = `Connected to ${pageName}`;
+            document.getElementById('connected-state').classList.remove('hidden');
+            document.getElementById('disconnected-state').classList.add('hidden');
+        }
+
+        function showDisconnectedState() {
+            document.getElementById('loading-state').classList.add('hidden');
+            document.getElementById('disconnected-state').classList.remove('hidden');
+            document.getElementById('connected-state').classList.add('hidden');
+        }
+
+        // Connect button handler with error handling
+        document.getElementById('connect-btn').addEventListener('click', async () => {
+            try {
+                const response = await new Promise((resolve) => {
+                    FB.login(resolve, { 
+                        scope: 'pages_messaging,pages_show_list,pages_manage_metadata' 
+                    });
+                });
+
+                if (response.authResponse) {
+                    const pageInfo = await getPageInfo(response.authResponse.accessToken);
+                    if (pageInfo) {
+                        const user = firebase.auth().currentUser;
+                        await db.collection("users").doc(user.uid).set({
+                            fbAccessToken: response.authResponse.accessToken,
+                            lastConnected: firebase.firestore.FieldValue.serverTimestamp()
+                        }, { merge: true });
+                        await savePageInfo(pageInfo);
+                        showConnectedState(pageInfo.name);
+                    } else {
+                        alert("No Facebook pages found for this account");
+                    }
+                } else {
+                    alert("Facebook login cancelled or failed");
+                }
+            } catch (error) {
+                console.error("Connection error:", error);
+                alert("Failed to connect Facebook page");
+            }
+        });
+
+        // Disconnect button handler
+        document.getElementById('disconnect-btn').addEventListener('click', async () => {
+            if (confirm("Are you sure you want to disconnect your Facebook Page?")) {
+                try {
+                    const user = firebase.auth().currentUser;
+                    await db.collection("users").doc(user.uid).update({
+                        fbAccessToken: firebase.firestore.FieldValue.delete(),
+                        fbPageId: firebase.firestore.FieldValue.delete(),
+                        fbPageName: firebase.firestore.FieldValue.delete()
+                    });
+                    showDisconnectedState();
+                } catch (error) {
+                    console.error("Disconnect error:", error);
+                    alert("Failed to disconnect");
+                }
+            }
+        });
+
+        // Dashboard button handler
+        document.getElementById('dashboard-btn').addEventListener('click', () => {
+            window.location.href = "dashboard2.html";
+        });
+    </script>
+</body>
+</html>

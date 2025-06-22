@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - FB Helpdesk</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
+        .header { background: #4267B2; color: white; padding: 15px; }
+        .dashboard { display: grid; grid-template-columns: 300px 1fr 250px; gap: 15px; height: 90vh; padding: 15px; }
+        .panel { background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); padding: 15px; overflow-y: auto; }
+        .conversation-item { padding: 10px; margin: 5px 0; cursor: pointer; border-radius: 4px; border: 1px solid #eee; }
+        .conversation-item:hover { background: #f5f5f5; }
+        .conversation-item.active { background: #e3f2fd; }
+        #messages-container { display: flex; flex-direction: column; gap: 8px; min-height: 300px; }
+        .message { padding: 8px 12px; border-radius: 18px; max-width: 70%; }
+        .customer-message { background: #f1f1f1; align-self: flex-start; }
+        .agent-message { background: #4285f4; color: white; align-self: flex-end; }
+        .reply-box { display: flex; margin-top: 20px; }
+        #loading { padding: 10px; color: #666; text-align: center; }
+        .sending { opacity: 0.7; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>FB Helpdesk Dashboard</h1>
+    </div>
+
+    <div class="dashboard">
+        <!-- Conversations Panel -->
+        <div class="panel">
+            <h2>Conversations</h2>
+            <div id="loading">Loading conversations...</div>
+            <div id="conversations-container"></div>
+        </div>
+
+        <!-- Messages Panel -->
+        <div class="panel">
+            <h2>Messages</h2>
+            <div id="messages-container"></div>
+            <div class="reply-box">
+                <input type="text" id="reply-input" placeholder="Type your reply...">
+                <button id="send-reply">Send</button>
+            </div>
+        </div>
+
+        <!-- Customer Profile -->
+        <div class="panel">
+            <h2>Customer Profile</h2>
+            <div id="profile-container">
+                <p>Select a conversation to view profile</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    
+    <script>
+        // Initialize Firebase (Your Config)
+        const firebaseConfig = {
+            apiKey: "AIzaSyBEV1p0m0_k9oI2ul40c_LZkrv4z6HNFd8",
+            authDomain: "fb-helpdesk-48191.firebaseapp.com",
+            projectId: "fb-helpdesk-48191",
+            storageBucket: "fb-helpdesk-48191.firebasestorage.app",
+            messagingSenderId: "656050836032",
+            appId: "1:656050836032:web:70d225ced9374f3112c5a5",
+            measurementId: "G-43FQEHS0CQ"
+        };
+        
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        let selectedConversationId = null;
+        let conversationListener = null;
+
+        // Authentication check
+        firebase.auth().onAuthStateChanged(user => {
+            if (!user) {
+                window.location.href = "index.html";
+            } else {
+                loadConversations();
+            }
+        });
+
+        // Load conversations list
+        function loadConversations() {
+            db.collection("conversations")
+                .orderBy("lastMessageTime", "desc")
+                .onSnapshot(snapshot => {
+                    document.getElementById("loading").style.display = "none";
+                    const container = document.getElementById("conversations-container");
+                    container.innerHTML = "";
+                    
+                    snapshot.forEach(doc => {
+                        const conversation = doc.data();
+                        const item = document.createElement("div");
+                        item.className = "conversation-item";
+                        item.innerHTML = `
+                            <strong>${conversation.customerId.substring(0, 8)}...</strong>
+                            <div>${conversation.messages?.length || 0} messages</div>
+                        `;
+                        item.onclick = () => selectConversation(doc.id);
+                        container.appendChild(item);
+                    });
+                }, error => {
+                    console.error("Conversations error:", error);
+                });
+        }
+
+        // Select conversation with real-time updates
+        function selectConversation(conversationId) {
+            // Clear previous listener
+            if (conversationListener) conversationListener();
+            
+            selectedConversationId = conversationId;
+            
+            // Highlight selected
+            document.querySelectorAll(".conversation-item").forEach(item => {
+                item.classList.remove("active");
+            });
+            event.currentTarget.classList.add("active");
+            
+            // Set up real-time listener
+            conversationListener = db.collection("conversations").doc(conversationId)
+                .onSnapshot(doc => {
+                    if (doc.exists) {
+                        const conversation = doc.data();
+                        loadMessages(conversation.messages);
+                        updateProfile(conversation);
+                    }
+                }, error => {
+                    console.error("Conversation error:", error);
+                });
+        }
+
+        // Update profile info
+        function updateProfile(conversation) {
+            document.getElementById("profile-container").innerHTML = `
+                <p><strong>Customer ID:</strong> ${conversation.customerId}</p>
+                <p><strong>Last Active:</strong> ${conversation.lastMessageTime?.toDate().toLocaleString() || 'Unknown'}</p>
+            `;
+        }
+
+        // Display messages
+        function loadMessages(messages) {
+            const container = document.getElementById("messages-container");
+            container.innerHTML = "";
+            
+            if (!messages || messages.length === 0) {
+                container.innerHTML = "<p>No messages yet</p>";
+                return;
+            }
+            
+            messages.forEach(msg => {
+                const messageDiv = document.createElement("div");
+                messageDiv.className = `message ${msg.sender === 'customer' ? 'customer-message' : 'agent-message'}`;
+                messageDiv.innerHTML = `
+                    <div>${msg.text}</div>
+                    <small>${msg.time?.toDate().toLocaleTimeString() || ''}</small>
+                `;
+                container.appendChild(messageDiv);
+            });
+            
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // Send reply with real-time update
+        document.getElementById("send-reply").addEventListener("click", async () => {
+            const messageText = document.getElementById("reply-input").value.trim();
+            if (!messageText || !selectedConversationId) return;
+                
+            const sendButton = document.getElementById("send-reply");
+            sendButton.classList.add('sending');
+            sendButton.disabled = true;
+                
+            try {
+                // First get the current conversation data
+                const convRef = db.collection("conversations").doc(selectedConversationId);
+                const convDoc = await convRef.get();
+                const currentMessages = convDoc.data().messages || [];
+                
+                // Add new message with client-side timestamp (will be replaced by server timestamp)
+                currentMessages.push({
+                    text: messageText,
+                    sender: 'agent',
+                    time: new Date() // Temporary client timestamp
+                });
+                
+                // Update the entire document with server timestamp
+                await convRef.update({
+                    messages: currentMessages,
+                    lastMessageTime: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                document.getElementById("reply-input").value = "";
+            } catch (error) {
+                console.error("Send error:", error);
+                alert("Failed to send: " + error.message);
+            } finally {
+                sendButton.classList.remove('sending');
+                sendButton.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

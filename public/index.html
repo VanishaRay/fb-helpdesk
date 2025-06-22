@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FB Helpdesk Login</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #080d8a; /* Your dark blue */
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .auth-container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            width: 350px;
+            text-align: center;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 25px;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            background-color: #4285f4;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button.google {
+            background-color: #db4437;
+        }
+        .switch-mode {
+            margin-top: 15px;
+            color: #666;
+        }
+        .switch-mode a {
+            color: #4285f4;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .error {
+            color: red;
+            margin: 5px 0;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <h1>Login</h1>
+        <div id="error-message" class="error"></div>
+        
+        <input type="email" id="email" placeholder="Email">
+        <input type="password" id="password" placeholder="Password">
+        
+        <button id="auth-button" onclick="handleAuth()">Login</button>
+        <button class="google" onclick="signInWithGoogle()">Sign in with Google</button>
+        
+        <div class="switch-mode">
+            <a id="switch-mode-link" onclick="switchAuthMode()">Need to register? Create an account</a>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    
+    <script>
+        // Your existing Firebase config
+        const firebaseConfig = {
+            apiKey: "AIzaSyBEV1p0m0_k9oI2ul40c_LZkrv4z6HNFd8",
+            authDomain: "fb-helpdesk-48191.firebaseapp.com",
+            projectId: "fb-helpdesk-48191",
+            storageBucket: "fb-helpdesk-48191.firebasestorage.app",
+            messagingSenderId: "656050836032",
+            appId: "1:656050836032:web:70d225ced9374f3112c5a5",
+            measurementId: "G-43FQEHS0CQ"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+
+        let isLoginMode = true;
+
+        function switchAuthMode() {
+            isLoginMode = !isLoginMode;
+            const title = document.getElementById('form-title');
+            const button = document.getElementById('auth-button');
+            const link = document.getElementById('switch-mode-link');
+            
+            if (isLoginMode) {
+                title.textContent = 'Login';
+                button.textContent = 'Login';
+                link.textContent = 'Need to register? Create an account';
+            } else {
+                title.textContent = 'Register';
+                button.textContent = 'Register';
+                link.textContent = 'Already have an account? Login';
+            }
+            
+            document.getElementById('error-message').textContent = '';
+        }
+
+        function handleAuth() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const errorElement = document.getElementById('error-message');
+            
+            if (!email || !password) {
+                errorElement.textContent = 'Please fill in all fields';
+                return;
+            }
+
+            if (isLoginMode) {
+                // Login existing user
+                auth.signInWithEmailAndPassword(email, password)
+                    .then(() => {
+                        window.location.href = "fb-connect3.html"; 
+                    })
+                    .catch(error => {
+                        errorElement.textContent = getErrorMessage(error);
+                    });
+            } else {
+                // Register new user
+                auth.createUserWithEmailAndPassword(email, password)
+                    .then(() => {
+                        alert('Account created successfully! Please login.');
+                        switchAuthMode();
+                    })
+                    .catch(error => {
+                        errorElement.textContent = getErrorMessage(error);
+                    });
+            }
+        }
+
+        function signInWithGoogle() {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithPopup(provider)
+                .then(() => {
+                    window.location.href = "fb-connect3.html"; // Consistent flow
+                })
+                .catch(error => {
+                    document.getElementById('error-message').textContent = getErrorMessage(error);
+                });
+        }
+
+        function getErrorMessage(error) {
+            switch (error.code) {
+                case 'auth/email-already-in-use':
+                    return 'This email is already registered.';
+                case 'auth/invalid-email':
+                    return 'Please enter a valid email address.';
+                case 'auth/weak-password':
+                    return 'Password should be at least 6 characters.';
+                case 'auth/user-not-found':
+                    return 'No account found with this email.';
+                case 'auth/wrong-password':
+                    return 'Incorrect password.';
+                default:
+                    return error.message;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connect Facebook Page</title>
+    <style>
+        :root {
+            --primary: #1877F2;
+            --success: #42B72A;
+            --danger: #FF4D4F;
+            --gray: #65676B;
+            --light-gray: #F0F2F5;
+            --white: #FFFFFF;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--light-gray);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: #1C1E21;
+        }
+        
+        .container {
+            background-color: var(--white);
+            border-radius: 8px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 500px;
+            overflow: hidden;
+        }
+        
+        .header {
+            background-color: var(--primary);
+            color: var(--white);
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .content {
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Facebook Page Integration</h1>
+        </div>
+        <div class="content">
+            <div class="loader"></div>
+            <p>Checking authentication...</p>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    
+    <script>
+        // Initialize Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyBEV1p0m0_k9oI2ul40c_LZkrv4z6HNFd8",
+            authDomain: "fb-helpdesk-48191.firebaseapp.com",
+            projectId: "fb-helpdesk-48191",
+            storageBucket: "fb-helpdesk-48191.firebasestorage.app",
+            messagingSenderId: "656050836032",
+            appId: "1:656050836032:web:70d225ced9374f3112c5a5",
+            measurementId: "G-43FQEHS0CQ"
+        };
+        firebase.initializeApp(firebaseConfig);
+
+        // Check auth state immediately when page loads
+        firebase.auth().onAuthStateChanged(user => {
+            if (!user) {
+                // No user logged in, redirect to login
+                window.location.href = "index.html";
+            } else {
+                // User is authenticated, show the actual content
+                initializePage();
+            }
+        });
+
+        function initializePage() {
+            // Now that we know user is authenticated, load the rest
+            document.querySelector('.content').innerHTML = `
+                <img src="https://static.xx.fbcdn.net/rsrc.php/y8/r/dF5SId3UHWd.svg" style="width:120px;margin-bottom:20px;" alt="Facebook Logo">
+                
+                <div id="disconnected-state">
+                    <div style="background:#f8f9fa;border-radius:8px;padding:20px;margin-bottom:25px;">
+                        <p style="color:#FF4D4F;font-weight:500;">No Facebook Page Connected</p>
+                    </div>
+                    
+                    <p>Connect your Facebook Page to manage messages in one place:</p>
+                    
+                    <div style="margin:25px 0;padding:15px;background:#f8f9fa;border-radius:8px;text-align:left;">
+                        <h3 style="margin-top:0;font-size:16px;color:#65676B;">This will allow:</h3>
+                        <ul style="padding-left:20px;color:#65676B;">
+                            <li>Read and respond to messages</li>
+                            <li>Manage your Page conversations</li>
+                            <li>View your Page message inbox</li>
+                        </ul>
+                    </div>
+                    
+                    <button id="connect-btn" style="display:block;width:100%;padding:12px;border-radius:6px;background:#1877F2;color:white;border:none;font-weight:600;cursor:pointer;">Connect Page</button>
+                </div>
+                
+                <div id="connected-state" style="display:none;">
+                    <div style="background:#f8f9fa;border-radius:8px;padding:20px;margin-bottom:25px;">
+                        <p style="color:#42B72A;font-weight:500;display:flex;align-items:center;justify-content:center;gap:8px;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM10 17L5 12L6.41 10.59L10 14.17L17.59 6.58L19 8L10 17Z" fill="#42B72A"/>
+                            </svg>
+                            Connected to <strong>Amazon Business</strong>
+                        </p>
+                    </div>
+                    
+                    <button id="disconnect-btn" style="display:block;width:100%;padding:12px;border-radius:6px;background:#FF4D4F;color:white;border:none;font-weight:600;cursor:pointer;margin-bottom:10px;">Delete Integration</button>
+                    <button id="dashboard-btn" style="display:block;width:100%;padding:12px;border-radius:6px;background:#42B72A;color:white;border:none;font-weight:600;cursor:pointer;">Reply To Messages</button>
+                </div>
+            `;
+
+            // Now initialize the Facebook SDK and check connection status
+            initializeFacebookSDK();
+        }
+
+        function initializeFacebookSDK() {
+            // Load Facebook SDK
+            window.fbAsyncInit = function() {
+                FB.init({
+                    appId: '1475528116950173',
+                    cookie: true,
+                    xfbml: true,
+                    version: 'v18.0'
+                });
+                
+                checkConnectionStatus();
+            };
+
+            // Load the SDK asynchronously
+            (function(d, s, id) {
+                var js, fjs = d.getElementsByTagName(s)[0];
+                if (d.getElementById(id)) return;
+                js = d.createElement(s); js.id = id;
+                js.src = "https://connect.facebook.net/en_US/sdk.js";
+                fjs.parentNode.insertBefore(js, fjs);
+            }(document, 'script', 'facebook-jssdk'));
+        }
+
+        function checkConnectionStatus() {
+            const user = firebase.auth().currentUser;
+            const db = firebase.firestore();
+            
+            db.collection("users").doc(user.uid).get()
+                .then(doc => {
+                    if (doc.exists && doc.data().fbAccessToken) {
+                        document.getElementById('disconnected-state').style.display = 'none';
+                        document.getElementById('connected-state').style.display = 'block';
+                    } else {
+                        document.getElementById('disconnected-state').style.display = 'block';
+                        document.getElementById('connected-state').style.display = 'none';
+                    }
+                    
+                    // Set up button handlers
+                    setupButtonHandlers();
+                });
+        }
+
+        function setupButtonHandlers() {
+            document.getElementById('connect-btn')?.addEventListener('click', connectFB);
+            document.getElementById('disconnect-btn')?.addEventListener('click', disconnectFB);
+            document.getElementById('dashboard-btn')?.addEventListener('click', () => {
+                window.location.href = "dashboard.html";
+            });
+        }
+
+        function connectFB() {
+            FB.login(response => {
+                if (response.authResponse) {
+                    const user = firebase.auth().currentUser;
+                    const db = firebase.firestore();
+                    const pageName = "Amazon Business"; // In real app, get this from FB API
+                    
+                    // Save to Firestore
+                    db.collection("users").doc(user.uid).set({
+                        fbAccessToken: response.authResponse.accessToken,
+                        fbPageId: response.authResponse.userID,
+                        fbPageName: pageName,
+                        lastConnected: firebase.firestore.FieldValue.serverTimestamp()
+                    }, { merge: true })
+                    .then(() => {
+                        document.getElementById('disconnected-state').style.display = 'none';
+                        document.getElementById('connected-state').style.display = 'block';
+                    });
+                }
+            }, { 
+                scope: 'pages_messaging,pages_show_list,pages_manage_metadata',
+                return_scopes: true
+            });
+        }
+
+        function disconnectFB() {
+            if (confirm("Are you sure you want to disconnect your Facebook Page?")) {
+                const user = firebase.auth().currentUser;
+                const db = firebase.firestore();
+                
+                // Remove from Firestore
+                db.collection("users").doc(user.uid).update({
+                    fbAccessToken: firebase.firestore.FieldValue.delete(),
+                    fbPageId: firebase.firestore.FieldValue.delete(),
+                    fbPageName: firebase.firestore.FieldValue.delete()
+                })
+                .then(() => {
+                    document.getElementById('connected-state').style.display = 'none';
+                    document.getElementById('disconnected-state').style.display = 'block';
+                    
+                    // Also call FB.logout() if needed
+                    FB.logout();
+                });
+            }
+        }
+    </script>
+</body>
+</html>
