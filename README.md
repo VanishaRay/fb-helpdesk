@@ -1,36 +1,89 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Facebook Helpdesk Dashboard
 
-## Getting Started
+A real-time customer support interface for managing Facebook Page messages, featuring conversation tracking and team collaboration tools.
 
-First, run the development server:
+## 🌐 Live Deployment
+🔗 [Vercel Hosted Version](https://fb-helpdesk-nk6a.vercel.app/)  
+📂 [GitHub Repository](https://github.com/VanishaRay/fb-helpdesk)
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## ✨ Key Features
+| Feature | Description |
+|---------|-------------|
+| **Real-time Messaging** | Sync with Facebook Messenger conversations instantly |
+| **24-Hour Session Grouping** | Auto-organizes messages into conversations |
+| **Customer Profiles** | View customer IDs and last activity timestamps |
+| **Multi-Agent Ready** | Firebase Auth supports team collaboration |
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🛠️ Technical Implementation
+### Core Stack
+- **Frontend**: Vanilla JS, CSS3, HTML5
+- **Backend**: Firebase (Authentication, Firestore Database)
+- **Facebook Integration**: 
+  - Graph API for message retrieval
+  - Pages Webhooks for real-time updates
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+### Security
+- Firebase Security Rules for data protection
+- Encrypted token storage
+- OAuth 2.0 for Facebook authentication
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🚀 Project Structure
+fb-helpdesk/
 
-## Learn More
+├── public/
 
-To learn more about Next.js, take a look at the following resources:
+│ ├── index.html # Login page (Email/Password)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+│ ├── fb-connect.html # Facebook Page integration
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+│ ├── dashboard.html # Main messaging interface
 
-## Deploy on Vercel
+│ └── styles.css # Global styles
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+├── firebase.json # Hosting configuration
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+└── README.md # This documentation
+
+
+## ⚙️ Setup Guide
+### Prerequisites
+- Firebase project with:
+  - Authentication (Email/Password enabled)
+  - Firestore Database
+- Facebook Developer App with:
+  - `pages_messaging` permission
+  - Valid OAuth URI: `https://fb-helpdesk-nk6a.vercel.app/fb-connect.html`
+
+### Configuration Steps
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/VanishaRay/fb-helpdesk.git
+
+🔍 Testing Instructions
+Test User Flow:
+
+Login → Connect Test Page → Send Message → Verify Sync
+
+Validation Checks:
+
+New messages appear within 5 seconds
+
+Replies reflect on Facebook within 10 seconds
+
+24-hour conversation grouping works
+
+📝 Submission Notes
+
+Developed entirely in vanilla JavaScript
+
+No external frameworks used
+
+Responsive down to 768px screens
+
+📬 Contact
+
+For questions about this submission:
+
+📧 vanisharay@gmail.com
+
+💼 https://www.linkedin.com/in/vanisha-ray-7466a8254/
